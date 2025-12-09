@@ -8,7 +8,10 @@ tar -xzf node_exporter-1.10.2.linux-arm64.tar.gz >/dev/null 2>&1
 sudo mkdir -p /usr/local/bin/node_exporter/ && sudo mv -f node_exporter-1.10.2.linux-arm64 /usr/local/bin/node_exporter 
 sudo chmod 0755 /usr/local/bin/node_exporter/node_exporter-1.10.2.linux-arm64 
 
-sudo useradd -rs /bin/false node_exporter
+if ! id -u node_exporter &>/dev/null; then
+    sudo useradd -rs /bin/false node_exporter
+fi
+
 sudo touch /etc/systemd/system/node_exporter.service
 sudo tee /etc/systemd/system/node_exporter.service > /dev/null <<EOF
 [Unit]
