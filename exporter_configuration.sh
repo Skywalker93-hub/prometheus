@@ -2,9 +2,12 @@
 # This script sets up environment variables for Prometheus exporters.
 # This script fits for ARM64 architecture system because it downloads the ARM64 version of node_exporter.
 
-echo "Starting setup of Prometheus Node Exporter. Please, wait"
+set -e
+
+echo "Starting setup of Prometheus Node Exporter. Please, waiting..."
 wget -q https://github.com/prometheus/node_exporter/releases/download/v1.10.2/node_exporter-1.10.2.linux-arm64.tar.gz
 tar -xzf node_exporter-1.10.2.linux-arm64.tar.gz >/dev/null 2>&1
+
 sudo mkdir -p /usr/local/bin/node_exporter/ && sudo mv -f node_exporter-1.10.2.linux-arm64 /usr/local/bin/node_exporter 
 sudo chmod 0755 /usr/local/bin/node_exporter/node_exporter-1.10.2.linux-arm64 
 
