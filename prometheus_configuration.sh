@@ -47,3 +47,19 @@ else
     echo "Prometheus service isn't running"
 fi
 
+sudo tee /etc/systemd/system/prometheus.service > /dev/null <<EOF
+[Unit]
+Description=prometheus.service
+After=network.target
+
+[Service]
+User=prometheus 
+Group=prometheus 
+ExecStart=/usr/local/bin/prometheus/prometheus-3.5.0.linux-arm64/prometheus \ 
+--config.file=/usr/local/bin/prometheus/prometheus-3.5.0.linux-arm64/prometheus.yml \
+--storage.tsdb.path=/usr/local/bin/prometheus/prometheus-3.5.0.linux-arm64/data
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
