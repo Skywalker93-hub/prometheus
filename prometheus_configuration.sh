@@ -47,19 +47,25 @@ else
     echo "Prometheus service isn't running"
 fi
 
-sudo tee /etc/systemd/system/prometheus.service > /dev/null <<EOF
-[Unit]
-Description=prometheus.service
-After=network.target
+$IP_ADDRESS{ip a | grep "192.*.*.*" | awk '{print $2}' | cut -d/ -f1}
+$PORT_PROMETHEUS=9090
 
-[Service]
-User=prometheus 
-Group=prometheus 
-ExecStart=/usr/local/bin/prometheus/prometheus-3.5.0.linux-arm64/prometheus \ 
---config.file=/usr/local/bin/prometheus/prometheus-3.5.0.linux-arm64/prometheus.yml \
---storage.tsdb.path=/usr/local/bin/prometheus/prometheus-3.5.0.linux-arm64/data
-Restart=on-failure
+read -p "Enter the IP adress for Node Exporter to scrape metrics: " $IP_ADDRESS_NODE_EXPORTER
 
-[Install]
-WantedBy=multi-user.target
+sudo tee /usr/local/bin/prometheus/prometheus-3.5.0.linux-arm64/prometheus.yml > /dev/null <<EOF
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ["$IP_ADDRESS:$PORT_PROMETHEUS"]
+
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["$IP_ADDRESS_NODE_EXPORTER:9100"]
 EOF
+
+sudo systemctl daemon-reload
+sudo systemctl restart prometheus
+sudo systemctl status prometheus
