@@ -46,7 +46,7 @@ Run Prometheus setup:
 Run Node Exporter setup:
 > sudo ./exporter_configuration.sh
 
-## **RecommendationsSecurity notes** 
+## **Recommendations** 
 - Create a snapshot or backup before running the scripts.
 - Test everything on a separate virtual machine first.
 
