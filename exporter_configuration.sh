@@ -6,7 +6,7 @@
 
 set -e
 
-# Step 1: Check architecture and Install Prometheus Node Exporter
+# Check architecture and Install Prometheus Node Exporter
 
 echo "Starting setup of Prometheus Node Exporter. Please, waiting..."
 
@@ -23,7 +23,7 @@ else
     exit 1
 fi
 
-# Step 2: Create directory and move node_exporter files to it, set permissions, and create a systemd service for node_exporter.
+# Create directory and move node_exporter files to it, set permissions, and create a systemd service for node_exporter.
 
 if [[ "$ARCH" = "x86_64" ]]; then
     NODE_EXPORTER_DIR=node_exporter-1.10.2.linux-amd64
@@ -45,7 +45,7 @@ fi
 PRIVATE_IP=$(hostname -I | grep -oE '192\.168\.30\.[0-9]+')
 
 if [[ -z "$PRIVATE_IP" ]]; then
-    echo "ERROR: Could not detect private IP on ens7"
+    echo "ERROR: Could not detect private IP"
     exit 1
 fi
 
@@ -65,7 +65,7 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-# Step 3: Reload systemd, enable and start node_exporter service, and check its status.
+# Reload systemd, enable and start node_exporter service, and check its status.
 
 sudo systemctl daemon-reload
 sudo systemctl enable node_exporter 
