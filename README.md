@@ -1,18 +1,18 @@
 # **Scripts for Installing and Configuring Prometheus and Node Exporter**
 
 ## **Description**
-Scripts for installing Prometheus and Node Exporter, creating service users, and configuring systemd services.
+Scripts for installing and configuring Prometheus and Node Exporter in a private network (VPC). The setup focuses on secure metrics collection using private IPs only.
 
 ## **What the scripts do (summary):**
 1) [prometheus_configuration.sh](https://github.com/Skywalker93-hub/prometheus/blob/master/prometheus_configuration.sh)
 
-- Downloads the Prometheus tarball (ARM64 build in the current version).
+- Automatically detects system architecture (AMD64 / ARM64) and downloads the appropriate Prometheus binary.
 - Extracts the package into `/usr/local/bin/prometheus`.
 - Creates a dedicated `prometheus` system user without a login shell.
 - Creates a `data` directory and assigns correct permissions (`prometheus:prometheus`).
-- Automatically detects the host machine’s IP address.
+- Automatically detects the host machine’s private IP address.
 - Creates and installs a systemd service at `/etc/systemd/system/prometheus.service`.
-- Generates a Prometheus configuration file with scrape targets for:
+- Generates a Prometheus configuration file dynamically with scrape targets for:
   - the Prometheus server itself,
   - a remote Node Exporter endpoint.
 
@@ -23,16 +23,17 @@ Scripts for installing Prometheus and Node Exporter, creating service users, and
 - Creates a `node_exporter` system user.
 - Configures and installs a Node Exporter systemd service.
 - Starts the service after installation.
-- **Interactive:** prompts the user for the IP address of the machine where Node Exporter is running, so Prometheus can scrape it.
+- - Automatically detects the node’s private IP address and binds Node Exporter to it (port 9100).
+- Firewall rules must allow access to port 9100 only from the Prometheus server (private network).
 
 
 ## **Requirements**
-- Scripts currently installs the ARM64 build (architecture must match the system)
+- Supported architectures: AMD64 and ARM64.
 - Linux with systemd  
 - sudo or root permissions
 
 ## **Security notes** 
-Configure the firewall/ACL if you need to restrict access to port 9090.
+Node Exporter is not publicly exposed. Port 9100 should be accessible only from the Prometheus server over the private network. Prometheus Web UI (9090) should not be exposed via public IP.
 
 ## **How to Run**
 Make scripts executable:
