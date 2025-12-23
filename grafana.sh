@@ -13,13 +13,20 @@ sudo apt-get install -y grafana
 
 # Add public IP address and port to the configuration file
 
-IP_PUB_ADDRESS=$(hostname -I | grep -oE "151\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
 PORT_GRAFANA=3000
-IP_PRIVATE_ADDRESS=$(hostname -I | grep -oE "192\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
 PORT_PROMETHEUS=9090
 
-sudo sed -Ei "s|;http_addr =.*|http_addr = $IP_PUB_ADDRESS|" /etc/grafana/grafana.ini
-sudo sed -E "s|;http_port =.*|http_port = $PORT_GRAFANA" /etc/grafana/grafana.ini
+echo "Now choose the IP addresses for Grafana and Prometheus servers from the list below:"
+ip addr show | awk '/inet / {print $2}' | cut -d/ -f1 | grep -vE '^127\.|^172\.17\.'
+
+read -p "Paste IP address for Grafana from the list above: " IP_ADDRESS_GRAFANA
+echo "Grafana IP: $IP_ADDRESS_GRAFANA" 
+
+read -p "Paste IP address for Prometheus from the list above: " IP_ADDRESS_PROMETHEUS
+echo "Prometheus IP: $IP_ADDRESS_PROMETHEUS"
+
+sudo sed -Ei "s|;http_addr =.*|http_addr = $IP_ADDRESS_GRAFANA|" /etc/grafana/grafana.ini
+sudo sed -E "s|;http_port =.*|http_port = $PORT_GRAFANA|" /etc/grafana/grafana.ini
 
 # Config Data Sources for Grafana in the /etc/grafana/provisioning/datasources/prometheus.yaml, which Grafana uses to connect to data sources
 
@@ -31,7 +38,7 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://$IP_PRIVATE_ADDRESS:$PORT_PROMETHEUS
+    url: http://$IP_ADDRESS_PROMETHEUS:$PORT_PROMETHEUS
     isDefault: true
 EOL
 
