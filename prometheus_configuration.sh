@@ -46,13 +46,14 @@ sudo mkdir -p /etc/prometheus && sudo touch /etc/prometheus/prometheus.yml
 sudo chown -R prometheus:prometheus /etc/prometheus
 
 # Set up Prometheus configuration file
-PRIVATE_IP_PROMETHEUS=$(hostname -I | grep -oE '192\.168\.30\.[0-9]+')
+
 PORT_PROMETHEUS=9090
 
-if [[ -z "$PRIVATE_IP_PROMETHEUS" ]]; then
-    echo "ERROR: Could not detect private IP"
-    exit 1
-fi 
+echo "Now choose the private IP addresses for Prometheus servers from the list below:"
+ip addr show | awk '/inet / {print $2}' | cut -d/ -f1 | grep -E '^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)'
+
+read -p "Paste IP address for Prometheus from the list above: " IP_ADDRESS_PROMETHEUS
+echo "Prometheus IP: $IP_ADDRESS_PROMETHEUS" 
 
 sudo tee /etc/prometheus/prometheus.yml > /dev/null <<EOF
 global:
@@ -61,7 +62,7 @@ global:
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: ["$PRIVATE_IP_PROMETHEUS:$PORT_PROMETHEUS"]
+      - targets: ["$IP_ADDRESS_PROMETHEUS:$PORT_PROMETHEUS"]
 
   - job_name: "node_exporter"
     static_configs:
@@ -84,7 +85,7 @@ After=network.target
 [Service]
 User=prometheus 
 Group=prometheus 
-ExecStart=/usr/local/bin/prometheus/$PROMETHEUS_DIR/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/usr/local/bin/prometheus/$PROMETHEUS_DIR/data --web.listen-address=$PRIVATE_IP_PROMETHEUS:9090
+ExecStart=/usr/local/bin/prometheus/$PROMETHEUS_DIR/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/usr/local/bin/prometheus/$PROMETHEUS_DIR/data --web.listen-address=$IP_ADDRESS_PROMETHEUS:9090
 Restart=on-failure
 
 [Install]
@@ -93,6 +94,7 @@ EOF
 
 # Start and enable Prometheus service
 sudo systemctl daemon-reload
+sudo systemctl enable prometheus
 sudo systemctl restart prometheus
 
 sudo systemctl is-active --quiet prometheus
