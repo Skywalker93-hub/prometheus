@@ -8,7 +8,7 @@ set -e
 
 # Check architecture and Install Prometheus Node Exporter
 
-echo "Starting setup of Prometheus Node Exporter. Please, waiting..."
+echo "Starting setup of Prometheus Node Exporter. Please wait..."
 
 ARCH=$(uname -m)
 
@@ -42,12 +42,11 @@ fi
 
 # Create systemd service file for node_exporter and bind it to private IP
 
-PRIVATE_IP=$(hostname -I | grep -oE '192\.168\.30\.[0-9]+')
+echo "Now choose the private IP address for Node Exporter server from the list below:"
+ip addr show | awk '/inet / {print $2}' | cut -d/ -f1 | grep -E '^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)'
 
-if [[ -z "$PRIVATE_IP" ]]; then
-    echo "ERROR: Could not detect private IP"
-    exit 1
-fi
+read -p "Paste IP address for Node Exporter server from the list above: " PRIVATE_IP
+echo "Node Exporter IP: $PRIVATE_IP" 
 
 sudo touch /etc/systemd/system/node_exporter.service
 sudo tee /etc/systemd/system/node_exporter.service > /dev/null <<EOF
