@@ -15,18 +15,14 @@ sudo apt-get install -y grafana
 
 PORT_GRAFANA=3000
 PORT_PROMETHEUS=9090
+IP_ADDRESS_GRAFANA="127.0.0.1"
 
-echo "Now choose the IP addresses for Grafana and Prometheus servers from the list below:"
-ip addr show | awk '/inet / {print $2}' | cut -d/ -f1 | grep -vE '^127\.|^172\.17\.'
-
-read -p "Paste IP address for Grafana from the list above: " IP_ADDRESS_GRAFANA
-echo "Grafana IP: $IP_ADDRESS_GRAFANA" 
-
+ip addr show | awk '/inet / {print $2}' | cut -d/ -f1 | grep -E '^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)'
 read -p "Paste IP address for Prometheus from the list above: " IP_ADDRESS_PROMETHEUS
 echo "Prometheus IP: $IP_ADDRESS_PROMETHEUS"
 
 sudo sed -Ei "s|;http_addr =.*|http_addr = $IP_ADDRESS_GRAFANA|" /etc/grafana/grafana.ini
-sudo sed -E "s|;http_port =.*|http_port = $PORT_GRAFANA|" /etc/grafana/grafana.ini
+sudo sed -Ei "s|;http_port =.*|http_port = $PORT_GRAFANA|" /etc/grafana/grafana.ini
 
 # Config Data Sources for Grafana in the /etc/grafana/provisioning/datasources/prometheus.yaml, which Grafana uses to connect to data sources
 
@@ -59,3 +55,30 @@ else
     echo "Grafana installation failed" 
     exit 1
 fi
+
+# Setup Nginx as a reverse proxy for Grafana 
+
+if ! command -v nginx &> /dev/null
+then
+    echo "Nginx could not be found, installing Nginx..."
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y nginx 
+else
+    echo "Nginx is already installed"
+fi
+
+sudo touch /etc/nginx/sites-available/grafana && sudo tee /etc/nginx/sites-available/grafana > /dev/null <<EOL
+server {
+    listen 80;
+
+    server_name grafana;   
+
+    location / {
+        proxy_pass http://$IP_ADDRESS_GRAFANA:$PORT_GRAFANA;
+    }
+}
+EOL
+
+sudo ln -s /etc/nginx/sites-available/grafana /etc/nginx/sites-enabled/grafana
+sudo nginx -t
+sudo systemctl reload nginx
