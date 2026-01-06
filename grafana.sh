@@ -47,13 +47,11 @@ sudo systemctl start grafana-server
 
 STATUS=$(sudo systemctl is-active grafana-server)
 
-echo $STATUS
+echo "$STATUS"
 if [[ "$STATUS" = "active" ]]; then
     echo "Grafana installation succeeded"
-    exit 0
 else
     echo "Grafana installation failed" 
-    exit 1
 fi
 
 # Setup Nginx as a reverse proxy for Grafana 
@@ -79,6 +77,16 @@ server {
 }
 EOL
 
-sudo ln -s /etc/nginx/sites-available/grafana /etc/nginx/sites-enabled/grafana
+sudo ln -sf /etc/nginx/sites-available/grafana /etc/nginx/sites-enabled/grafana
 sudo nginx -t
 sudo systemctl reload nginx
+
+# Setup Firewall if it is installed and Configure it to allow HTTP traffic
+
+if ! dpkg -l | grep -q "ufw"; then
+    sudo apt-get update && sudo apt-get install -y ufw
+fi
+
+sudo ufw deny 3000/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
