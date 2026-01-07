@@ -4,10 +4,12 @@
 
 # Update package list and install Grafana
 
+echo "Grafana installation is starting..."
+
 sudo apt-get install -y apt-transport-https wget
 sudo mkdir -p /etc/apt/keyrings/
 sudo wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
-echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
 sudo apt-get update
 sudo apt-get install -y grafana 
 
@@ -27,7 +29,7 @@ sudo sed -Ei "s|;http_port =.*|http_port = $PORT_GRAFANA|" /etc/grafana/grafana.
 # Config Data Sources for Grafana in the /etc/grafana/provisioning/datasources/prometheus.yaml, which Grafana uses to connect to data sources
 
 sudo touch /etc/grafana/provisioning/datasources/prometheus.yaml 
-sudo tee /etc/grafana/provisioning/datasources/prometheus.yaml > /dev/null <<EOL
+sudo tee /etc/grafana/provisioning/datasources/prometheus.yaml > /dev/null <<'EOL'
 apiVersion: 1
 
 datasources:
@@ -52,41 +54,79 @@ if [[ "$STATUS" = "active" ]]; then
     echo "Grafana installation succeeded"
 else
     echo "Grafana installation failed" 
+    exit 1
 fi
 
 # Setup Nginx as a reverse proxy for Grafana 
 
+echo "Nginx installation is starting..."
+
 if ! command -v nginx &> /dev/null
 then
-    echo "Nginx could not be found, installing Nginx..."
     sudo apt update && sudo apt upgrade -y
     sudo apt install -y nginx 
 else
     echo "Nginx is already installed"
 fi
 
+# Configure TLS/SSL for Nginx using OpenSSL 
+
+if ! command -v openssl &> /dev/null; then
+    sudo apt-get update && sudo apt-get install -y openssl
+fi
+
+if [[ ! -d /etc/nginx/ssl ]]; then
+    sudo mkdir -p /etc/nginx/ssl
+fi
+
+if [[ ! -f /etc/nginx/ssl/grafana.key || ! -f /etc/nginx/ssl/grafana.crt ]]; then
+    sudo openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/nginx/ssl/grafana.key -out /etc/nginx/ssl/grafana.crt -sha256 -days 365 -subj "/C=X/L=XX/O=Monitoring/CN=localhost"
+fi
+
+# Configure Nginx to proxy requests to Grafana 
+
 sudo touch /etc/nginx/sites-available/grafana && sudo tee /etc/nginx/sites-available/grafana > /dev/null <<EOL
 server {
     listen 80;
+    listen [::]:80;
+    server_name _;
 
-    server_name grafana;   
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/ssl/grafana.crt;
+    ssl_certificate_key /etc/nginx/ssl/grafana.key;
 
     location / {
-        proxy_pass http://$IP_ADDRESS_GRAFANA:$PORT_GRAFANA;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 EOL
 
 sudo ln -sf /etc/nginx/sites-available/grafana /etc/nginx/sites-enabled/grafana
+
+# Test Nginx configuration and reload Nginx
+
 sudo nginx -t
 sudo systemctl reload nginx
 
-# Setup Firewall if it is installed and Configure it to allow HTTP traffic
+# Setup Firewall if it is installed and Configure it to allow HTTP, HTTPS and SSH traffic requiers
 
-if ! dpkg -l | grep -q "ufw"; then
+if command -v ufw &> /dev/null; then
     sudo apt-get update && sudo apt-get install -y ufw
 fi
 
 sudo ufw deny 3000/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
+sudo ufw allow 22/tcp 
+sudo ufw --force enable 
