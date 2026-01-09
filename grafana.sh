@@ -21,7 +21,7 @@ IP_ADDRESS_GRAFANA="127.0.0.1"
 
 ip addr show | awk '/inet / {print $2}' | cut -d/ -f1 | grep -E '^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)'
 read -p "Paste IP address for Prometheus from the list above: " IP_ADDRESS_PROMETHEUS
-echo "Prometheus IP: $IP_ADDRESS_PROMETHEUS"
+echo "Prometheus IP: ${IP_ADDRESS_PROMETHEUS}"
 
 sudo sed -Ei "s|;http_addr =.*|http_addr = $IP_ADDRESS_GRAFANA|" /etc/grafana/grafana.ini
 sudo sed -Ei "s|;http_port =.*|http_port = $PORT_GRAFANA|" /etc/grafana/grafana.ini
@@ -29,7 +29,7 @@ sudo sed -Ei "s|;http_port =.*|http_port = $PORT_GRAFANA|" /etc/grafana/grafana.
 # Config Data Sources for Grafana in the /etc/grafana/provisioning/datasources/prometheus.yaml, which Grafana uses to connect to data sources
 
 sudo touch /etc/grafana/provisioning/datasources/prometheus.yaml 
-sudo tee /etc/grafana/provisioning/datasources/prometheus.yaml > /dev/null <<'EOL'
+sudo tee /etc/grafana/provisioning/datasources/prometheus.yaml > /dev/null <<EOL
 apiVersion: 1
 
 datasources:
@@ -79,8 +79,11 @@ if [[ ! -d /etc/nginx/ssl ]]; then
     sudo mkdir -p /etc/nginx/ssl
 fi
 
-if [[ ! -f /etc/nginx/ssl/grafana.key || ! -f /etc/nginx/ssl/grafana.crt ]]; then
-    sudo openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/nginx/ssl/grafana.key -out /etc/nginx/ssl/grafana.crt -sha256 -days 365 -subj "/C=X/L=XX/O=Monitoring/CN=localhost"
+read -p "Enter domain name for Grafana: " DOMAIN_NAME
+echo "Domain name for Grafana: ${DOMAIN_NAME}"
+
+if [[ ! -s /etc/nginx/ssl/grafana.key || ! -s /etc/nginx/ssl/grafana.crt ]]; then
+    sudo openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/nginx/ssl/grafana.key -out /etc/nginx/ssl/grafana.crt -sha256 -days 365 -subj "/C=XX/L=XX/O=Monitoring/CN=${DOMAIN_NAME}"
 fi
 
 # Configure Nginx to proxy requests to Grafana 
@@ -89,9 +92,9 @@ sudo touch /etc/nginx/sites-available/grafana && sudo tee /etc/nginx/sites-avail
 server {
     listen 80;
     listen [::]:80;
-    server_name _;
+    server_name ${DOMAIN_NAME};
 
-    return 301 https://$host$request_uri;
+    return 301 https://\$host\$request_uri;
 }
 
 server {
@@ -104,10 +107,10 @@ server {
 
     location / {
         proxy_pass http://127.0.0.1:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOL
@@ -121,7 +124,7 @@ sudo systemctl reload nginx
 
 # Setup Firewall if it is installed and Configure it to allow HTTP, HTTPS and SSH traffic requiers
 
-if command -v ufw &> /dev/null; then
+if ! command -v ufw &> /dev/null; then
     sudo apt-get update && sudo apt-get install -y ufw
 fi
 
