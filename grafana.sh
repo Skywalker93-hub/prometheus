@@ -100,7 +100,7 @@ server {
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    server_name _;
+    server_name ${DOMAIN_NAME};
 
     ssl_certificate     /etc/nginx/ssl/grafana.crt;
     ssl_certificate_key /etc/nginx/ssl/grafana.key;
