@@ -54,7 +54,7 @@ Run Prometheus setup:
 Run Node Exporter setup:
 > sudo ./exporter_configuration.sh
 
-Run Node Grafana setup:
+Run Grafana setup:
 > sudo ./grafana.sh
 
 ## **Recommendations** 
