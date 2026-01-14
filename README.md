@@ -1,7 +1,7 @@
-# **Scripts for Installing and Configuring Prometheus and Node Exporter**
+# **Scripts for Installing and Configuring Prometheus, Node Exporter and Grafana**
 
 ## **Description**
-Scripts for installing and configuring Prometheus and Node Exporter in a private network (VPC). The setup focuses on secure metrics collection using private IPs only.
+Scripts for installing and configuring Prometheus, Node Exporter and Grafana in a private network (VPC). The setup focuses on secure metrics collection using private IPs only and exposing Grafana securely via a reverse proxy.
 
 ## **What the scripts do (summary):**
 1) [prometheus_configuration.sh](https://github.com/Skywalker93-hub/prometheus/blob/master/prometheus_configuration.sh)
@@ -23,8 +23,17 @@ Scripts for installing and configuring Prometheus and Node Exporter in a private
 - Creates a `node_exporter` system user.
 - Configures and installs a Node Exporter systemd service.
 - Starts the service after installation.
-- - Automatically detects the node’s private IP address and binds Node Exporter to it (port 9100).
+- Automatically detects the node’s private IP address and binds Node Exporter to it (port 9100).
 - Firewall rules must allow access to port 9100 only from the Prometheus server (private network).
+
+3) [grafana.sh](https://github.com/Skywalker93-hub/prometheus/blob/master/grafana.sh)
+
+- Installs Grafana and configures it to listen only on localhost (127.0.0.1:3000).
+- Provisions Prometheus as a Grafana data source via `/etc/grafana/provisioning/datasources/prometheus.yaml`.
+- Installs Nginx and configures it as a reverse proxy for Grafana.
+- Generates a self-signed TLS certificate (365 days) and enables HTTPS on port 443.
+- Redirects HTTP (port 80) to HTTPS (301).
+- Configures UFW to allow 22/80/443 and deny direct access to 3000.
 
 
 ## **Requirements**
@@ -33,19 +42,20 @@ Scripts for installing and configuring Prometheus and Node Exporter in a private
 - sudo or root permissions
 
 ## **Security notes** 
-Node Exporter is not publicly exposed. Port 9100 should be accessible only from the Prometheus server over the private network. Prometheus Web UI (9090) should not be exposed via public IP.
+Node Exporter is not publicly exposed. Port 9100 should be accessible only from the Prometheus server over the private network. Prometheus Web UI (9090) should not be exposed via public IP. Grafana should not be exposed directly on port 3000; access should go through Nginx (80/443).
 
 ## **How to Run**
 Make scripts executable:
-> chmod +x prometheus_configuration.sh 
-
-> exporter_configuration.sh
+> chmod +x prometheus_configuration.sh exporter_configuration.sh grafana.sh
 
 Run Prometheus setup:
 > sudo ./prometheus_configuration.sh
 
 Run Node Exporter setup:
 > sudo ./exporter_configuration.sh
+
+Run Node Grafana setup:
+> sudo ./grafana.sh
 
 ## **Recommendations** 
 - Create a snapshot or backup before running the scripts.
